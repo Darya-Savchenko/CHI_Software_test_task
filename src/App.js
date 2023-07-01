@@ -1,7 +1,13 @@
-import "./App.css";
+import './App.css';
+import { Table } from './components/Table';
 
 function App() {
-  return <div className="App">CHI Software Test Task</div>;
+  return (
+    <div className="App">
+      <h1>CHI Software Test Task</h1>
+      <Table />
+    </div>
+  );
 }
 
 export default App;
