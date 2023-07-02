@@ -1,24 +1,17 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { MaterialReactTable } from 'material-react-table';
 import {
-  Box,
   Button,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  IconButton,
   MenuItem,
-  Stack,
   TextField,
-  Tooltip,
+  ListItemIcon
 } from '@mui/material';
-import { Delete, Edit } from '@mui/icons-material';
+import { Delete } from '@mui/icons-material';
 import { availability } from './availability';
+import {CreateNewAccountModal} from './CreateNewAccountModal'
 
 export const Table = () => {
   const [createModalOpen, setCreateModalOpen] = useState(false);
-  const [validationErrors, setValidationErrors] = useState({});
 
   const [tableData, setTableData] = useState([]);
   const [isError, setIsError] = useState(false);
@@ -32,16 +25,30 @@ export const Table = () => {
       setIsRefetching(true);
     }
 
-    fetch('https://myfakeapi.com/api/cars/')
+    const localStorageData = localStorage.getItem('cars');
+
+    if (localStorageData) {
+      const parsedData = JSON.parse(localStorageData);
+      setTableData(parsedData);
+      setIsLoading(false);
+      return;
+    }
+
+    fetch(`${process.env.REACT_APP_API}/api/cars/`)
       .then((response) => {
         if (!response.ok) {
-          throw new Error('Ошибка при получении данных');
+          throw new Error('Error while fetching data');
         }
         return response.json();
       })
       .then((data) => {
-        setTableData(data.cars);
+        const processedData = data.cars.map((car) => ({
+          ...car,
+          availability: car.availability ? 'Yes' : 'No',
+        }));
+        setTableData(processedData);
         setIsLoading(false);
+        localStorage.setItem('cars', JSON.stringify(processedData));
       })
       .catch((error) => {
         console.error('Error:', error);
@@ -50,35 +57,30 @@ export const Table = () => {
   }, []);
 
   const handleSaveRowEdits = async ({ exitEditingMode, row, values }) => {
-    if (!Object.keys(validationErrors).length) {
       tableData[row.index] = values;
-      //send/receive api updates here, then refetch or update local table data for re-render
       setTableData([...tableData]);
-      exitEditingMode(); //required to exit editing mode and close modal
-    }
+      localStorage.setItem('cars', JSON.stringify(tableData));
+      exitEditingMode();
   };
 
   const handleCreateNewRow = (values) => {
     tableData.push(values);
     setTableData([...tableData]);
-  };
-
-  const handleCancelRowEdits = () => {
-    setValidationErrors({});
+    localStorage.setItem('cars', JSON.stringify(tableData));
   };
 
   const handleDeleteRow = useCallback(
     (row) => {
       if (
-        !confirm(`Are you sure you want to delete ${row.getValue('car_model')}`)
+        !confirm(`Are you sure you want to delete ${row.getValue('car_model')}?`)
       ) {
         return;
       }
-      //send api delete request here, then refetch or update local table data for re-render
       tableData.splice(row.index, 1);
       setTableData([...tableData]);
+      localStorage.setItem('cars', JSON.stringify(tableData));
     },
-    [tableData]
+    [tableData],
   );
 
   const columns = useMemo(
@@ -107,7 +109,7 @@ export const Table = () => {
         enableEditing: false,
       },
       {
-        car_vin: 'car_vin',
+        accessorKey: 'car_vin',
         header: 'VIN',
         enableEditing: false,
       },
@@ -116,15 +118,15 @@ export const Table = () => {
         header: 'Availability',
         muiTableBodyCellEditTextFieldProps: {
           select: true,
-          children: availability.map((availability) => (
-            <MenuItem key={availability.visible} value={availability.visible}>
-              {availability.visible}
+          children: availability.map((value) => (
+            <MenuItem key={value} value={value}>
+              {value}
             </MenuItem>
           )),
         },
       },
     ],
-    []
+    [],
   );
 
   return (
@@ -140,17 +142,16 @@ export const Table = () => {
         }}
         columns={columns}
         data={tableData}
-        editingMode="modal" //default
+        editingMode='modal'
         enableColumnOrdering
         enableEditing
         onEditingRowSave={handleSaveRowEdits}
-        onEditingRowCancel={handleCancelRowEdits}
         muiToolbarAlertBannerProps={
           isError
             ? {
-                color: 'error',
-                children: 'Error loading data',
-              }
+              color: 'error',
+              children: 'Error loading data',
+            }
             : undefined
         }
         state={{
@@ -158,25 +159,26 @@ export const Table = () => {
           showAlertBanner: isError,
           showProgressBars: isRefetching,
         }}
-        renderRowActions={({ row, table }) => (
-          <Box sx={{ display: 'flex', gap: '1rem' }}>
-            <Tooltip arrow placement="left" title="Edit">
-              <IconButton onClick={() => table.setEditingRow(row)}>
-                <Edit />
-              </IconButton>
-            </Tooltip>
-            <Tooltip arrow placement="right" title="Delete">
-              <IconButton color="error" onClick={() => handleDeleteRow(row)}>
-                <Delete />
-              </IconButton>
-            </Tooltip>
-          </Box>
-        )}
+        renderRowActionMenuItems={({ closeMenu, row, table }) => [
+          <MenuItem
+            key={1}
+            onClick={() => {
+              handleDeleteRow(row)
+              closeMenu();
+            }}
+            sx={{ m: 0 }}
+          >
+            <ListItemIcon>
+              <Delete />
+            </ListItemIcon>
+            Delete
+          </MenuItem>
+        ]}
         renderTopToolbarCustomActions={() => (
           <Button
-            color="secondary"
+            color='secondary'
             onClick={() => setCreateModalOpen(true)}
-            variant="contained"
+            variant='contained'
           >
             ADD NEW CAR
           </Button>
@@ -189,53 +191,5 @@ export const Table = () => {
         onSubmit={handleCreateNewRow}
       />
     </>
-  );
-};
-
-export const CreateNewAccountModal = ({ open, columns, onClose, onSubmit }) => {
-  const [values, setValues] = useState(() =>
-    columns.reduce((acc, column) => {
-      acc[column.accessorKey ?? ''] = '';
-      return acc;
-    }, {})
-  );
-
-  const handleSubmit = () => {
-    onSubmit(values);
-    onClose();
-  };
-
-  return (
-    <Dialog open={open}>
-      <DialogTitle textAlign="center">Create New Account</DialogTitle>
-      <DialogContent>
-        <form onSubmit={(e) => e.preventDefault()}>
-          <Stack
-            sx={{
-              width: '100%',
-              minWidth: { xs: '300px', sm: '360px', md: '400px' },
-              gap: '1.5rem',
-            }}
-          >
-            {columns.map((column) => (
-              <TextField
-                key={column.accessorKey}
-                label={column.header}
-                name={column.accessorKey}
-                onChange={(e) =>
-                  setValues({ ...values, [e.target.name]: e.target.value })
-                }
-              />
-            ))}
-          </Stack>
-        </form>
-      </DialogContent>
-      <DialogActions sx={{ p: '1.25rem' }}>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button color="secondary" onClick={handleSubmit} variant="contained">
-          Add New Car
-        </Button>
-      </DialogActions>
-    </Dialog>
   );
 };

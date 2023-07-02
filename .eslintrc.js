@@ -27,5 +27,6 @@ module.exports = {
     'no-constant-condition': 'error',
     'no-mixed-spaces-and-tabs': 'error',
     'react/react-in-jsx-scope': 'off',
+    "react/prop-types": "off"
   },
 };
