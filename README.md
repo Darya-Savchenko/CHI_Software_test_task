@@ -1,8 +1,10 @@
 Hi there,
 
-I'm Daria Savchenko and this is my test task for CHI Software. 
+I'm Daria Savchenko and this is my test task for CHI Software.
 
-In this project, a table was implemented to display various data about cars, along with CRUD, functionality, pagination,
+You can view my test task at the following URL: http://vps59047.hyperhost.name/
+
+In this project, a table was implemented to display various data about cars, along with CRUD functionality, pagination,
 search, filtering, and data persistence between page refreshes. React and the Material React Table library 
 (https://www.material-react-table.com/) were used to implement this functionality.
 
@@ -40,3 +42,6 @@ cd repository
 3. Run the setup script:
 bash setup.sh
 
+My contacts:
+email: savchenkodarya277@gmail.com
+Telegram: darya_svv
